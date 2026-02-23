@@ -55,6 +55,8 @@ config["esp_other_drawfov"] = false
 config["esp_other_fullbright"] = false
 config["esp_other_thirdperson"] = false
 config["esp_other_thirdperson_distance"] = 15
+config["esp_other_freecam"] = false
+config["esp_other_freecam_speed"] = 5
 
 config["misc_autobunnyhop"] = false
 config["misc_autostrafe"] = false
@@ -94,6 +96,7 @@ config.keybinds["menu_key"] = 72
 config.keybinds["logger_key"] = 74
 config.keybinds["thirdperson_key"] = 0
 config.keybinds["esp_entity_wh_key"] = 0
+config.keybinds["freecam_key"] = 0
 
 config["friends"] = {}
 
@@ -111,6 +114,9 @@ observingPlayers.watcher = {}
 observingPlayers.spec = {}
 local files, dir = file.Find( "itemicons/*.json", "DATA" )
 local frametime, deviation = engine.ServerFrameTime()
+
+local NoclipPos, NoclipAngles, NoclipOn, NoclipX, NoclipY, NoclipDuck, NoclipJump = LocalPlayer():EyePos(), LocalPlayer():GetAngles(), false, 0, 0, false, false
+local toggledelayN = false
 
 --=================== миски ================
 
@@ -266,6 +272,92 @@ hook.Add("Think", RandomString(), function()
 		elseif !ValidateESP(v) && table.HasValue(playerTable, v) then
 			table.RemoveByValue(playerTable, v)
 		end
+	end
+end)
+
+hook.Add("CreateMove", RandomString(), function( ucmd )
+	if ( frame || russia_menu:IsVisible() ) && not gui.IsConsoleVisible() && not gui.IsGameUIVisible() && not editingText then
+		local ply = LocalPlayer()
+		local f, b, l, r, j, d = input.GetKeyCode(input.LookupBinding("+forward")), input.GetKeyCode(input.LookupBinding("+back")), input.GetKeyCode(input.LookupBinding("+moveleft")), input.GetKeyCode(input.LookupBinding("+moveright")), input.GetKeyCode(input.LookupBinding("+jump")), input.GetKeyCode(input.LookupBinding("+duck"))
+		if input.IsKeyDown( f ) then ucmd:SetForwardMove( ply:GetMaxSpeed() ) end
+		if input.IsKeyDown( b ) then ucmd:SetForwardMove( -ply:GetMaxSpeed() ) end
+		if input.IsKeyDown( r ) then ucmd:SetSideMove( ply:GetMaxSpeed() ) end
+		if input.IsKeyDown( l ) then ucmd:SetSideMove( -ply:GetMaxSpeed() ) end
+		if input.IsKeyDown( d ) then ucmd:SetButtons( IN_DUCK ) end
+		if input.IsKeyDown( j ) then ucmd:SetButtons( IN_JUMP ) end
+	end
+
+	if config["esp_other_freecam"] then
+		if config.keybinds["freecam_key"] == 0 then
+			NoclipOn = true
+		elseif ( ( ( config.keybinds["freecam_key"] >= 107 && config.keybinds["freecam_key"] <= 113 ) && input.IsMouseDown(config.keybinds["freecam_key"] ) && !toggledelayN ) || input.IsKeyDown(config.keybinds["freecam_key"]) && !toggledelayN ) then
+			if NoclipOn then
+				NoclipOn = false
+				toggledelayN = true
+				timer.Simple(0.5, function() toggledelayN = false end)
+			else
+				NoclipOn = true
+				NoclipPos, NoclipAngles = LocalPlayer():EyePos(), ucmd:GetViewAngles()
+				NoclipY, NoclipX = ucmd:GetViewAngles().x, ucmd:GetViewAngles().y
+				toggledelayN = true
+				timer.Simple(0.5, function() toggledelayN = false end)
+			end
+		end
+		if NoclipOn then
+			ucmd:ClearMovement()
+			if ucmd:KeyDown(IN_JUMP) then
+				ucmd:RemoveKey(IN_JUMP)
+				NoclipJump = true
+			elseif NoclipJump then
+				NoclipJump = false
+			end
+			if ucmd:KeyDown(IN_DUCK) then
+				ucmd:RemoveKey(IN_DUCK)
+				NoclipDuck = true
+			elseif NoclipDuck then
+				NoclipDuck = false
+			end
+			NoclipX = NoclipX-(ucmd:GetMouseX()/10)
+			if NoclipY+(ucmd:GetMouseY()/10) > 89 then NoclipY = 89 elseif NoclipY+(ucmd:GetMouseY()/10) < -89 then NoclipY = -89 else NoclipY = NoclipY+(ucmd:GetMouseY()/10) end
+			ucmd:SetViewAngles(NoclipAngles)
+		end
+	elseif NoclipOn == true then
+		NoclipOn = false
+	end
+end)
+
+hook.Add("CalcView", RandomString(), function(ply, pos, ang, fov)
+	if config["esp_other_freecam"] && NoclipOn then
+		local inspeed, infw, inback, inleft, inright = input.GetKeyCode(input.LookupBinding("+speed")), input.GetKeyCode(input.LookupBinding("+forward")), input.GetKeyCode(input.LookupBinding("+back")), input.GetKeyCode(input.LookupBinding("+moveleft")), input.GetKeyCode(input.LookupBinding("+moveright"))
+		local Camera = {}
+		local Speed = config["esp_other_freecam_speed"]
+		local MouseAngs = Angle( NoclipY, NoclipX, 0 )
+		if input.IsKeyDown(inspeed) then
+			Speed = Speed * 5
+		end
+		if input.IsKeyDown(infw) then
+			NoclipPos = NoclipPos+(MouseAngs:Forward()*Speed)
+		end
+		if input.IsKeyDown(inback) then
+			NoclipPos = NoclipPos-(MouseAngs:Forward()*Speed)
+		end
+		if input.IsKeyDown(inleft) then
+			NoclipPos = NoclipPos-(MouseAngs:Right()*Speed)
+		end
+		if input.IsKeyDown(inright) then
+			NoclipPos = NoclipPos+(MouseAngs:Right()*Speed)
+		end
+		if NoclipJump then
+			NoclipPos = NoclipPos+Vector(0,0,Speed)
+		end
+		if NoclipDuck then
+			NoclipPos = NoclipPos-Vector(0,0,Speed)
+		end
+		Camera.origin = NoclipPos
+		Camera.angles = MouseAngs
+		Camera.fov = fov
+		Camera.drawviewer = true
+		return Camera
 	end
 end)
 
@@ -556,13 +648,11 @@ function CreateTimeGUI()
 	CreateCheckBox("autostrafe", 10, 30, "misc_autostrafe", false, misc)
 	CreateCheckBox("speclist", 10, 50, "misc_observerlist", false, misc)
 	CreateCheckBox("autoclick", 10, 70, "misc_autoclick", false, misc)
-	CreateButton("playerlist", "Open the player list menu.", CreatePlayerList, 10, 90, misc)
-	CreateButton("ignores", "The filter will be applied when the filter menu is closed. This filter applies to ESP and Aimbot.", CreateFilterPanel, 10, 110, misc)
-
-	CreateLabel("menu key", 10, 10, config)
-	CreateKeybind(10, 30, "menu_key", config)
-	CreateLabel("logger key", 10, 50, config)
-	CreateKeybind(10, 70, "logger_key", config)
+	CreateCheckBox("freecam", 10, 90, "esp_other_freecam", false, misc)
+	CreateKeybind(110, 90, "freecam_key", misc)
+	CreateSlider("freecam speed", 10, 110, "esp_other_freecam_speed", 1, 30, 0, misc)
+	CreateButton("playerlist", "Open the player list menu.", CreatePlayerList, 10, 150, misc)
+	CreateButton("ignores", "The filter will be applied when the filter menu is closed. This filter applies to ESP and Aimbot.", CreateFilterPanel, 10, 170, misc)
 	local usercfgs = {}
 	cfgDropdown = vgui.Create("DComboBox", config)
 	cfgDropdown:SetSize(200, 20)
@@ -930,6 +1020,7 @@ function CreateEntityList()
 		eList = vgui.Create("DFrame")
 		eList:SetSize(400, 200)
 		eList:SetTitle("Entity ESP")
+
 		if frame then
 			local frameX, frameY = frame:GetPos()
 			eList:SetPos(frameX + 605, frameY)
@@ -941,21 +1032,65 @@ function CreateEntityList()
 			eList = false
 		end
 
-		local entList = vgui.Create("DListView", eList)
-		entList:DockMargin(0, 0, 100, 0)
+		local allEntClasses = {}
+		for _, v in ipairs(ents.GetAll()) do
+			local class = v:GetClass()
+			if class != "worldspawn" && class != "player" && v:GetOwner() != LocalPlayer() then
+				allEntClasses[class] = true
+			end
+		end
+
+		local listContainer = vgui.Create("DPanel", eList)
+		listContainer:DockMargin(0, 0, 100, 0)
+		listContainer:Dock(FILL)
+		listContainer.Paint = function() end
+
+		local search = vgui.Create("DTextEntry", listContainer)
+		search:Dock(TOP)
+		search:DockMargin(0, 0, 0, 5)
+		search:SetTall(18)
+		search:SetPlaceholderText("search...")
+
+		local entList = vgui.Create("DListView", listContainer)
 		entList:Dock(FILL)
 		entList:SetMultiSelect(false)
 		entList:AddColumn("Entities")
 
-		for k, v in ipairs(ents.GetAll()) do
-			local good = true
-			for k, line in ipairs( entList:GetLines() ) do
-    			if line:GetValue( 1 ) == v:GetClass() then good = false break end
+		local function RebuildEntityLines(filter)
+			filter = string.Trim(string.lower(filter or ""))
+			local selectedClass
+			if entList:GetSelectedLine() != nil then
+				local _, line = entList:GetSelectedLine()
+				selectedClass = line and line:GetColumnText(1)
 			end
-			if v:GetClass() != "worldspawn" && v:GetClass() != "player" && v:GetOwner() != LocalPlayer() && good then
-				entList:AddLine(v:GetClass())
+
+			entList:Clear()
+			local classes = {}
+			for class in pairs(allEntClasses) do
+				if filter == "" or string.find(string.lower(class), filter, 1, true) != nil then
+					table.insert(classes, class)
+				end
+			end
+			table.sort(classes)
+			for _, class in ipairs(classes) do
+				entList:AddLine(class)
+			end
+
+			if selectedClass then
+				for _, line in ipairs(entList:GetLines()) do
+					if line:GetColumnText(1) == selectedClass then
+						entList:SelectItem(line)
+						break
+					end
+				end
 			end
 		end
+
+		search.OnChange = function(self)
+			RebuildEntityLines(self:GetValue())
+		end
+
+		RebuildEntityLines("")
 
 		local enable = vgui.Create("DCheckBoxLabel", eList)
 		enable:SetText("Enable ESP")
@@ -1054,19 +1189,6 @@ hook.Add("Think", RandomString(), function()
 		end
 	end
 	entdown = input.IsKeyDown(entKey)
-end)
-
-hook.Add("CreateMove", RandomString(), function( ucmd )
-	if ( frame || russia_menu:IsVisible() ) && not gui.IsConsoleVisible() && not gui.IsGameUIVisible() && not editingText then
-		local ply = LocalPlayer()
-		local f, b, l, r, j, d = input.GetKeyCode(input.LookupBinding("+forward")), input.GetKeyCode(input.LookupBinding("+back")), input.GetKeyCode(input.LookupBinding("+moveleft")), input.GetKeyCode(input.LookupBinding("+moveright")), input.GetKeyCode(input.LookupBinding("+jump")), input.GetKeyCode(input.LookupBinding("+duck"))
-		if input.IsKeyDown( f ) then ucmd:SetForwardMove( ply:GetMaxSpeed() ) end
-		if input.IsKeyDown( b ) then ucmd:SetForwardMove( -ply:GetMaxSpeed() ) end
-		if input.IsKeyDown( r ) then ucmd:SetSideMove( ply:GetMaxSpeed() ) end
-		if input.IsKeyDown( l ) then ucmd:SetSideMove( -ply:GetMaxSpeed() ) end
-		if input.IsKeyDown( d ) then ucmd:SetButtons( IN_DUCK ) end
-		if input.IsKeyDown( j ) then ucmd:SetButtons( IN_JUMP ) end
-	end
 end)
 
 --===================================
