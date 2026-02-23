@@ -13,7 +13,6 @@ config["aim_master_toggle"] = false
 config["aim_onkey"] = false
 config["aim_norecoil"] = false
 config["aim_silent"] = false
-config["aim_autofire"] = false
 config["aim_prediction"] = false
 config["aim_target"] = 1
 config["aim_hitbox"] = 2
@@ -24,6 +23,7 @@ config["aim_ignorefriends"] = false
 
 config["trigger_master_toggle"] = false
 config["trigger_onkey"] = false
+
 
 config["esp_player_box"] = false
 config["esp_player_name"] = false
@@ -55,8 +55,6 @@ config["esp_other_drawfov"] = false
 config["esp_other_fullbright"] = false
 config["esp_other_thirdperson"] = false
 config["esp_other_thirdperson_distance"] = 15
-config["esp_other_freecam"] = false
-config["esp_other_freecam_speed"] = 5
 
 config["misc_autobunnyhop"] = false
 config["misc_autostrafe"] = false
@@ -64,9 +62,9 @@ config["misc_ttt"] = false
 config["misc_observerlist"] = false
 config["misc_rainbow"] = false	
 config["misc_rainbow_speed"] = 20
-config["misc_unload_enable"] = false
 
 config["config_name"] = nil
+
 
 config["esp_entity_box"] = false
 config["esp_entity_wh_onkey"] = false
@@ -95,8 +93,6 @@ config.keybinds["trigger_onkey_key"] = 0
 config.keybinds["menu_key"] = 72
 config.keybinds["logger_key"] = 74
 config.keybinds["thirdperson_key"] = 0
-config.keybinds["freecam_key"] = 0
-config.keybinds["panic_key"] = 0
 config.keybinds["esp_entity_wh_key"] = 0
 
 config["friends"] = {}
@@ -115,9 +111,6 @@ observingPlayers.watcher = {}
 observingPlayers.spec = {}
 local files, dir = file.Find( "itemicons/*.json", "DATA" )
 local frametime, deviation = engine.ServerFrameTime()
-
-local toggledelayN = false
-local NoclipPos, NoclipAngles, NoclipOn, NoclipX, NoclipY, NoclipDuck, NoclipJump = LocalPlayer():EyePos(), LocalPlayer():GetAngles(), false, 0, 0, false, false
 
 --=================== миски ================
 
@@ -514,18 +507,17 @@ function CreateTimeGUI()
 	CreateKeybind(110, 30, "aim_onkey_key", aim)
 	CreateCheckBox("no recoil", 10, 50, "aim_norecoil", false, aim)
 	CreateCheckBox("silentaim", 10, 70, "aim_silent", false, aim)
-	CreateCheckBox("autofire (silent)", 10, 90, "aim_autofire", false, aim)
-	CreateCheckBox("predict velocity", 10, 110, "aim_prediction", false, aim)
-	CreateDropdown("harget selection", 10, 130, {"crosshair", "closest Distance", "lowest Health"}, "aim_target", aim)
-	CreateDropdown("hitbone", 10, 170, {"hitscan", "head", "body"}, "aim_hitbox", aim)
-	CreateSlider("aim FoV", 10, 215, "aim_fov", 0, 180, 0, aim)
-	CreateCheckBox("aimbot smooth", 10, 255, "aim_smoothing", false, aim)
-	CreateSlider("smooth", 10, 275, "aim_smoothing_value", 0, 2, 2, aim)
-	CreateCheckBox("ignore friend", 10, 320, "aim_ignorefriends", false, aim)
+	CreateCheckBox("predict velocity", 10, 90, "aim_prediction", false, aim)
+	CreateDropdown("harget selection", 10, 110, {"crosshair", "closest Distance", "lowest Health"}, "aim_target", aim)
+	CreateDropdown("hitbone", 10, 150, {"hitscan", "head", "body"}, "aim_hitbox", aim)
+	CreateSlider("aim FoV", 10, 195, "aim_fov", 0, 180, 0, aim)
+	CreateCheckBox("aimbot smooth", 10, 240, "aim_smoothing", false, aim)
+	CreateSlider("smooth", 10, 260, "aim_smoothing_value", 0, 2, 2, aim)
+	CreateCheckBox("ignore friend", 10, 300, "aim_ignorefriends", false, aim)
 
-	CreateCheckBox("enable triggerbot", 10, 340, "trigger_master_toggle", false, aim)
-	CreateCheckBox("triggerbot on key", 10, 360, "trigger_onkey", false, aim)
-	CreateKeybind(130, 390, "trigger_onkey_key", aim)
+	CreateCheckBox("enable triggerbot", 10, 320, "trigger_master_toggle", false, aim)
+	CreateCheckBox("triggerbot on key", 10, 340, "trigger_onkey", false, aim)
+	CreateKeybind(130, 340, "trigger_onkey_key", aim)
 
     CreateCheckBox("box", 10, 10, "esp_player_box", true, visplayer)
     CreateCheckBox("name", 10, 30, "esp_player_name", true, visplayer)
@@ -564,23 +556,17 @@ function CreateTimeGUI()
 	CreateCheckBox("autostrafe", 10, 30, "misc_autostrafe", false, misc)
 	CreateCheckBox("speclist", 10, 50, "misc_observerlist", false, misc)
 	CreateCheckBox("autoclick", 10, 70, "misc_autoclick", false, misc)
-	CreateCheckBox("freecam", 10, 90, "esp_other_freecam", false, misc)
-	CreateKeybind(100, 90, "freecam_key", misc)
-	CreateSlider("freecam speed", 10, 110, "esp_other_freecam_speed", 1, 30, 0, misc)
-	CreateButton("playerlist", "Open the player list menu.", CreatePlayerList, 10, 160, misc)
-	CreateButton("ignores", "The filter will be applied when the filter menu is closed. This filter applies to ESP and Aimbot.", CreateFilterPanel, 10, 180, misc)
+	CreateButton("playerlist", "Open the player list menu.", CreatePlayerList, 10, 90, misc)
+	CreateButton("ignores", "The filter will be applied when the filter menu is closed. This filter applies to ESP and Aimbot.", CreateFilterPanel, 10, 110, misc)
 
 	CreateLabel("menu key", 10, 10, config)
 	CreateKeybind(10, 30, "menu_key", config)
 	CreateLabel("logger key", 10, 50, config)
 	CreateKeybind(10, 70, "logger_key", config)
-	CreateCheckBox("enable unload key", 10, 90, "misc_unload_enable", false, config)
-	CreateLabel("unload key", 10, 110, config)
-	CreateKeybind(10, 130, "panic_key", config)
 	local usercfgs = {}
 	cfgDropdown = vgui.Create("DComboBox", config)
 	cfgDropdown:SetSize(200, 20)
-	cfgDropdown:SetPos(10, 150)
+	cfgDropdown:SetPos(10, 90)
 	if loadedCfg[0] != nil then
 		cfgDropdown:ChooseOption(loadedCfg[0], loadedCfg[1])
 	end
@@ -589,11 +575,11 @@ function CreateTimeGUI()
 	end
 	cfgDropdown:SetSortItems(false)
 
-	CreateButton("save cfg", "Save Config.", SaveConfig, 10, 175, config)
-	CreateButton("load cfg", "Load Config.", LoadConfig, 10, 200, config)
-	CreateButton("create cfg", "Create Config.", CreateConfig, 10, 225, config)
-	CreateButton("delete cfg", "Delete Config.", DeleteConfig, 10, 250, config)
-	CreateTextInput("cfg name", "config_name", 10, 275, 16, config)
+	CreateButton("save cfg", "Save Config.", SaveConfig, 10, 115, config)
+	CreateButton("load cfg", "Load Config.", LoadConfig, 10, 140, config)
+	CreateButton("create cfg", "Create Config.", CreateConfig, 10, 165, config)
+	CreateButton("delete cfg", "Delete Config.", DeleteConfig, 10, 190, config)
+	CreateTextInput("cfg name", "config_name", 10, 215, 16, config)
 
 
 	if teamFilterWasOpen then
@@ -1070,89 +1056,506 @@ hook.Add("Think", RandomString(), function()
 	entdown = input.IsKeyDown(entKey)
 end)
 
-hook.Add("CreateMove", RandomString(), function(ucmd)
-	if config["esp_other_freecam"] then
-		if config.keybinds["freecam_key"] == 0 then 
-			NoclipOn = true
-		elseif ( ( ( config.keybinds["freecam_key"] >= 107 && config.keybinds["freecam_key"] <= 113 ) && input.IsMouseDown(config.keybinds["freecam_key"] ) && !toggledelayN ) || input.IsKeyDown(config.keybinds["freecam_key"]) && !toggledelayN ) then
-			if NoclipOn then	
-				NoclipOn = false
-				toggledelayN = true
-				timer.Simple(0.5, function() toggledelayN = false end)
-			else
-				NoclipOn = true
-				NoclipPos, NoclipAngles = LocalPlayer():EyePos(), ucmd:GetViewAngles()
-				NoclipY, NoclipX = ucmd:GetViewAngles().x, ucmd:GetViewAngles().y
-				toggledelayN = true
-				timer.Simple(0.5, function() toggledelayN = false end)
-			end
-		end
-		if NoclipOn then
-			ucmd:ClearMovement()
-			if ucmd:KeyDown(IN_JUMP) then
-				ucmd:RemoveKey(IN_JUMP)
-				NoclipJump = true
-			elseif NoclipJump then
-				NoclipJump = false
-			end
-			if ucmd:KeyDown(IN_DUCK) then
-				ucmd:RemoveKey(IN_DUCK)
-				NoclipDuck = true
-			elseif NoclipDuck then
-				NoclipDuck = false
-			end
-			NoclipX = NoclipX - (ucmd:GetMouseX() / 10)
-			if NoclipY + (ucmd:GetMouseY() / 10) > 89 then
-				NoclipY = 89
-			elseif NoclipY + (ucmd:GetMouseY() / 10) < -89 then
-				NoclipY = -89
-			else
-				NoclipY = NoclipY + (ucmd:GetMouseY() / 10)
-			end
-			NoclipAngles = Angle(NoclipY, NoclipX, 0)
-			ucmd:SetViewAngles(NoclipAngles)
-		end
-	elseif NoclipOn == true then
-		NoclipOn = false
+hook.Add("CreateMove", RandomString(), function( ucmd )
+	if ( frame || russia_menu:IsVisible() ) && not gui.IsConsoleVisible() && not gui.IsGameUIVisible() && not editingText then
+		local ply = LocalPlayer()
+		local f, b, l, r, j, d = input.GetKeyCode(input.LookupBinding("+forward")), input.GetKeyCode(input.LookupBinding("+back")), input.GetKeyCode(input.LookupBinding("+moveleft")), input.GetKeyCode(input.LookupBinding("+moveright")), input.GetKeyCode(input.LookupBinding("+jump")), input.GetKeyCode(input.LookupBinding("+duck"))
+		if input.IsKeyDown( f ) then ucmd:SetForwardMove( ply:GetMaxSpeed() ) end
+		if input.IsKeyDown( b ) then ucmd:SetForwardMove( -ply:GetMaxSpeed() ) end
+		if input.IsKeyDown( r ) then ucmd:SetSideMove( ply:GetMaxSpeed() ) end
+		if input.IsKeyDown( l ) then ucmd:SetSideMove( -ply:GetMaxSpeed() ) end
+		if input.IsKeyDown( d ) then ucmd:SetButtons( IN_DUCK ) end
+		if input.IsKeyDown( j ) then ucmd:SetButtons( IN_JUMP ) end
 	end
 end)
 
-hook.Add("CalcView", RandomString(), function(ply, pos, ang, fov)
-	if config["esp_other_freecam"] && NoclipOn then
-		local inspeed, infw, inback, inleft, inright = input.GetKeyCode(input.LookupBinding("+speed")), input.GetKeyCode(input.LookupBinding("+forward")), input.GetKeyCode(input.LookupBinding("+back")), input.GetKeyCode(input.LookupBinding("+moveleft")), input.GetKeyCode(input.LookupBinding("+moveright"))
-		local Camera = {}
-		local Speed = config["esp_other_freecam_speed"]
-		local MouseAngs = Angle( NoclipY, NoclipX, 0 )
-		if input.IsKeyDown(inspeed) then
-			Speed = Speed * 5
+--===================================
+--=================================== визуалы
+--===================================
+
+-- ======================= есп
+
+local bones = {
+	{ S = "ValveBiped.Bip01_Head1", E = "ValveBiped.Bip01_Neck1" },
+	{ S = "ValveBiped.Bip01_Neck1", E = "ValveBiped.Bip01_Spine4" },
+	{ S = "ValveBiped.Bip01_Spine4", E = "ValveBiped.Bip01_Spine2" },
+	{ S = "ValveBiped.Bip01_Spine2", E = "ValveBiped.Bip01_Spine1" },
+	{ S = "ValveBiped.Bip01_Spine1", E = "ValveBiped.Bip01_Spine" },
+	{ S = "ValveBiped.Bip01_Spine", E = "ValveBiped.Bip01_Pelvis" },
+	{ S = "ValveBiped.Bip01_Spine2", E = "ValveBiped.Bip01_L_UpperArm" },
+	{ S = "ValveBiped.Bip01_L_UpperArm", E = "ValveBiped.Bip01_L_Forearm" },
+	{ S = "ValveBiped.Bip01_L_Forearm", E = "ValveBiped.Bip01_L_Hand" },
+	{ S = "ValveBiped.Bip01_Spine2", E = "ValveBiped.Bip01_R_UpperArm" },
+	{ S = "ValveBiped.Bip01_R_UpperArm", E = "ValveBiped.Bip01_R_Forearm" },
+	{ S = "ValveBiped.Bip01_R_Forearm", E = "ValveBiped.Bip01_R_Hand" },
+	{ S = "ValveBiped.Bip01_Pelvis", E = "ValveBiped.Bip01_L_Thigh" },
+	{ S = "ValveBiped.Bip01_L_Thigh", E = "ValveBiped.Bip01_L_Calf" },
+	{ S = "ValveBiped.Bip01_L_Calf", E = "ValveBiped.Bip01_L_Foot" },
+	{ S = "ValveBiped.Bip01_L_Foot", E = "ValveBiped.Bip01_L_Toe0" },
+	{ S = "ValveBiped.Bip01_Pelvis", E = "ValveBiped.Bip01_R_Thigh" },
+	{ S = "ValveBiped.Bip01_R_Thigh", E = "ValveBiped.Bip01_R_Calf" },
+	{ S = "ValveBiped.Bip01_R_Calf", E = "ValveBiped.Bip01_R_Foot" },
+	{ S = "ValveBiped.Bip01_R_Foot", E = "ValveBiped.Bip01_R_Toe0" },
+}
+
+hook.Add("CheatHUDPaint", RandomString(), function()
+
+	for k, v in ipairs(player.GetAll()) do
+		if ValidateESP(v) then
+			local MaxX, MaxY, MinX, MinY, V1, V2, V3, V4, V5, V6, V7, V8, isVis = GetENTPos( v )
+			if isVis then
+				if config["esp_player_box"] then
+					if config["esp_player_highlight_box"] then
+						if table.HasValue(config["friends"], v:SteamID()) then
+							surface.SetDrawColor(string.ToColor(config.colors["esp_player_highlight_box"]))
+						else
+							surface.SetDrawColor(string.ToColor(config.colors["esp_player_box"]))
+						end
+					else
+						surface.SetDrawColor(string.ToColor(config.colors["esp_player_box"]))
+					end
+					surface.DrawLine( MaxX, MaxY, MinX, MaxY )
+					surface.DrawLine( MaxX, MaxY, MaxX, MinY )
+					surface.DrawLine( MinX, MinY, MaxX, MinY )
+					surface.DrawLine( MinX, MinY, MinX, MaxY )
+				end
+				if config["esp_player_name"] then
+					surface.SetFont("ESP_Font_Main")
+					local w, h = surface.GetTextSize(v:Nick())
+					local col
+					if config["esp_player_highlight_name"] then
+						if table.HasValue(config["friends"], v:SteamID()) then
+							col = string.ToColor(config.colors["esp_player_highlight_name"])
+						else
+							col = string.ToColor(config.colors["esp_player_name"])
+						end
+					else
+						col = string.ToColor(config.colors["esp_player_name"])
+					end
+					draw.SimpleTextOutlined(v:Nick(), "ESP_Font_Main", MaxX-(MaxX-MinX)/2-w/2, MinY-1, col, TEXT_ALIGN_LEFT, TEXT_ALIGN_BOTTOM, 1, Color(0,0,0))
+				end
+				if config["esp_player_hp"] then
+					local hpMultiplier = v:Health() / v:GetMaxHealth()
+					hpMultiplier = math.Clamp(hpMultiplier, 0, 1)
+					local barLen = MinY - MaxY
+					barlen = barLen * hpMultiplier
+					local appliedBar = (MinY - MaxY) - barlen
+					surface.SetFont("ESP_Font_Flag")
+					local w, h = surface.GetTextSize(v:Health())
+					draw.SimpleTextOutlined(v:Health(), "ESP_Font_Flag", MinX-w-6, MinY+10, string.ToColor(config.colors["esp_player_hp"]), TEXT_ALIGN_LEFT, TEXT_ALIGN_BOTTOM, 1, Color(0,0,0))
+					surface.SetDrawColor(0, 0, 0, 100)
+					surface.DrawLine( MinX-2, MinY, MinX-2, MaxY )
+					surface.DrawLine( MinX-3, MinY, MinX-3, MaxY )
+					surface.SetDrawColor(0, 255, 0)
+					surface.DrawLine( MinX-2, MinY-appliedBar, MinX-2, MaxY )
+					surface.DrawLine( MinX-3, MinY-appliedBar, MinX-3, MaxY )
+				end
+				if config["esp_player_armor"] then
+					local yOffset
+					if config["esp_player_hp"] then
+						yOffset = 20
+					else
+						yOffset = 10
+					end
+					surface.SetFont("ESP_Font_Flag")
+					local w, h = surface.GetTextSize(v:Armor())
+					if v:Armor() != 0 then
+						draw.SimpleTextOutlined(v:Armor(), "ESP_Font_Flag", MinX-w-6, MinY+yOffset, string.ToColor(config.colors["esp_player_armor"]), TEXT_ALIGN_LEFT, TEXT_ALIGN_BOTTOM, 1, Color(0,0,0))
+					end
+				end
+				if config["esp_player_weapon"] then
+                        surface.SetFont("ESP_Font_Flag")
+                        if IsValid(v:GetActiveWeapon()) then
+                            local w, h = surface.GetTextSize(config["esp_player_weapon_fancy"] and v:GetActiveWeapon():GetPrintName() or v:GetActiveWeapon():GetClass())
+                            draw.SimpleTextOutlined(config["esp_player_weapon_fancy"] and v:GetActiveWeapon():GetPrintName() or v:GetActiveWeapon():GetClass(), "ESP_Font_Flag", MaxX-(MaxX-MinX)/2-w/2, MaxY+12, string.ToColor(config.colors["esp_player_weapon"]), TEXT_ALIGN_LEFT, TEXT_ALIGN_BOTTOM, 1, Color(0,0,0))
+                        end
+                    end
+                    if config["esp_player_rank"] then
+                        local yOffset
+                        if config["esp_player_weapon"] then
+                            yOffset = 24
+                        else
+                            yOffset = 12
+                        end
+                        surface.SetFont("ESP_Font_Flag")
+                        local w, h = surface.GetTextSize(v:GetUserGroup())
+                        draw.SimpleTextOutlined(v:GetUserGroup(), "ESP_Font_Flag", MaxX-(MaxX-MinX)/2-w/2, MaxY+yOffset, string.ToColor(config.colors["esp_player_rank"]), TEXT_ALIGN_LEFT, TEXT_ALIGN_BOTTOM, 1, Color(0,0,0))
+                    end
+                    if config["esp_player_team"] then
+                        local yOffset
+                        if config["esp_player_weapon"] && config["esp_player_rank"] then
+                            yOffset = 36
+                        elseif ( config["esp_player_weapon"] && !config["esp_player_rank"] ) || ( !config["esp_player_weapon"] && config["esp_player_rank"] ) then
+                            yOffset = 24
+                        else
+                            yOffset = 12
+                        end
+                        local teamColor = team.GetColor(v:Team())
+                        surface.SetFont("ESP_Font_Flag")
+                        local w, h = surface.GetTextSize(team.GetName(v:Team()))
+                        draw.SimpleTextOutlined(team.GetName(v:Team()), "ESP_Font_Flag", MaxX-(MaxX-MinX)/2-w/2, MaxY+yOffset, teamColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_BOTTOM, 1, Color(0,0,0))
+                end
+				if config["esp_player_snaplines"] then
+					surface.SetDrawColor( string.ToColor(config.colors["esp_player_snaplines"]))
+					surface.DrawLine( ScrW() / 2 - 1, ScrH() , MaxX - ( MaxX - MinX ) / 2 - 1, MaxY )
+				end
+				if config["esp_player_skeleton"] then
+					for _, b in pairs( bones ) do
+						if v:LookupBone(b.S) != nil && v:LookupBone(b.E) != nil then
+							local spos, epos = v:GetBonePosition(v:LookupBone(b.S)):ToScreen(), v:GetBonePosition(v:LookupBone(b.E)):ToScreen()
+							if spos.visible && epos.visible then
+								surface.SetDrawColor( string.ToColor(config.colors["esp_player_skeleton"]) )
+								surface.DrawLine( spos.x, spos.y, epos.x, epos.y )
+							end
+						end
+					end
+				end
+				if config["misc_observerlist"] then
+					for k, v in ipairs(observingPlayers.watcher) do
+						if !IsValid(v) then return end
+						surface.SetFont("ESP_Font_Main")
+						local nameWidth, nameHeight = surface.GetTextSize("Observer: "..v:Name())
+						draw.SimpleText("Observer: "..v:Name(), "ESP_Font_Main", ScrW() - nameWidth - 2, 0 + (15 * ( k - 1 ) ), Color(255, 255, 255), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+					end
+					for k, v in ipairs(observingPlayers.spec) do
+						if !IsValid(v) then return end
+						surface.SetFont("ESP_Font_Main")
+						local nameWidth, nameHeight = surface.GetTextSize("Spectator: "..v:Name())
+						draw.SimpleText("Spectator: "..v:Name(), "ESP_Font_Main", ScrW() - nameWidth - 2, 0 + (15 * #observingPlayers.watcher) + ( 15 * k ), Color(255, 0, 0), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+					end
+				end
+				if v.Traitor then
+					surface.SetFont("ESP_Font_Flag")
+					local w, h = surface.GetTextSize("Traitor")
+					draw.SimpleTextOutlined("Traitor", "ESP_Font_Flag", MaxX+5, MinY + h, Color(255, 0, 0) , TEXT_ALIGN_LEFT, TEXT_ALIGN_BOTTOM, 1, Color(0,0,0))
+				end
+				if config["misc_ttt"] && engine.ActiveGamemode() == "murder" then
+					if v:HasWeapon("weapon_mu_knife") then
+						surface.SetFont("ESP_Font_Flag")
+						local w, h = surface.GetTextSize("Murderer")
+						draw.SimpleTextOutlined("Murderer", "ESP_Font_Flag", MaxX+5, MinY + h, Color(255, 0, 0) , TEXT_ALIGN_LEFT, TEXT_ALIGN_BOTTOM, 1, Color(0,0,0))	
+					end 	
+				end
+			end
 		end
-		if input.IsKeyDown(infw) then
-			NoclipPos = NoclipPos + (MouseAngs:Forward() * Speed)
+	end
+
+
+		for k, ent in ipairs(ents.GetAll()) do
+			if IsValid(ent) and not ent:IsPlayer() then
+				local dist = ent:GetPos():Distance(LocalPlayer():GetPos())
+				if dist <= config["esp_entity_render_distance"] then
+
+					local entClass = ent:GetClass() or ""
+					local show = false
+					
+
+					if config["entities"] then
+						for _, whitelistedClass in ipairs(config["entities"]) do
+							if entClass == whitelistedClass then
+								show = true
+								break
+							end
+						end
+					end
+					
+
+					local key = config.keybinds["esp_entity_wh_key"] or 0
+					if config["esp_entity_wh_onkey"] and show then
+						if key ~= 0 then
+							show = input.IsKeyDown(key)
+						else
+							show = false
+						end
+					end
+					
+					if config["esp_entity_box"] and show then
+						local MaxX, MaxY, MinX, MinY, V1, V2, V3, V4, V5, V6, V7, V8, isVis = GetENTPos(ent)
+						if isVis then
+							surface.SetDrawColor(string.ToColor(config.colors["esp_entity_box"]))
+							surface.DrawLine( MaxX, MaxY, MinX, MaxY )
+							surface.DrawLine( MaxX, MaxY, MaxX, MinY )
+							surface.DrawLine( MinX, MinY, MaxX, MinY )
+							surface.DrawLine( MinX, MinY, MinX, MaxY )
+							surface.SetFont("ESP_Font_Flag")
+							local txt = entClass
+							local w, h = surface.GetTextSize(txt)
+							draw.SimpleTextOutlined(txt, "ESP_Font_Flag", MaxX-(MaxX-MinX)/2-w/2, MinY-1, string.ToColor(config.colors["esp_entity_box"]), TEXT_ALIGN_LEFT, TEXT_ALIGN_BOTTOM, 1, Color(0,0,0))
+						end
+					end
+				end
+			end
 		end
-		if input.IsKeyDown(inback) then
-			NoclipPos = NoclipPos - (MouseAngs:Forward() * Speed)
-		end
-		if input.IsKeyDown(inleft) then
-			NoclipPos = NoclipPos - (MouseAngs:Right() * Speed)
-		end
-		if input.IsKeyDown(inright) then
-			NoclipPos = NoclipPos + (MouseAngs:Right() * Speed)
-		end
-		if NoclipJump then
-			NoclipPos = NoclipPos + Vector(0, 0, Speed)
-		end
-		if NoclipDuck then
-			NoclipPos = NoclipPos - Vector(0, 0, Speed)
-		end
-		Camera.origin = NoclipPos
-		Camera.angles = MouseAngs
-		Camera.fov = fov
-		Camera.drawviewer = true
-		return Camera
+
+	end)
+
+-- ======================= глоу
+
+hook.Add("PreDrawHalos", RandomString(), function()
+	if config["esp_player_glow"] then
+		halo.Add(playerTable, string.ToColor(config.colors["esp_player_glow"]), 1, 1, 2, true, true)
 	end
 end)
 
+-- ======================= чамсы
+
+local texturedCham = CreateMaterial( "textured", "VertexLitGeneric", {
+  ["$basetexture"] = "models/debug/debugwhite",
+  ["$model"] = 1,
+  ["$translucent"] = 1,
+  ["$vertexalpha"] = 1,
+  ["$vertexcolor"] = 1
+})
+
+local wireframeCham = CreateMaterial( "wireframe", "Wireframe", {
+  ["$basetexture"] = "models/debug/debugwhite",
+  ["$model"]       = 1,
+  ["$translucent"] = 1,
+  ["$alpha"]       = 1,
+  ["$nocull"]      = 1,
+})
+
+hook.Add("RenderScreenspaceEffects", RandomString(), function()
+
+	local colorFix = (1 / 255)
+	local chamColVis = string.ToColor(config.colors["esp_player_chams"])
+	local chamColInvis = string.ToColor(config.colors["esp_player_chams_xyz"])
+
+	if config["esp_player_chams_xyz"] then
+
+		if config["esp_player_chams_material"] == 1 then
+			cam.Start3D( EyePos(), EyeAngles() )
+				for k, v in pairs( player.GetAll() ) do
+					if ValidateESP(v) then
+						cam.IgnoreZ(true)
+						render.SetColorModulation( chamColInvis.r * colorFix, chamColInvis.g * colorFix, chamColInvis.b * colorFix )
+						render.SetBlend( chamColInvis.a * colorFix)
+						render.MaterialOverride( texturedCham )
+						v:SetRenderMode( 1 )
+						if chamColInvis.a == 255 then
+							v:SetColor(Color(255, 255, 255, 255))
+						else
+							v:SetColor(Color(255, 255, 255, 0))
+						end
+						v:DrawModel()
+						cam.IgnoreZ(false)
+						render.SetColorModulation( 1, 1, 1 )
+						render.SetBlend( 1 )
+						render.MaterialOverride()
+						v:DrawModel()
+					end
+				end
+			cam.End3D()
+		elseif config["esp_player_chams_material"] == 2 then
+			cam.Start3D( EyePos(), EyeAngles() )
+				for k, v in pairs( player.GetAll() ) do
+					if ValidateESP(v) then
+						render.SetColorModulation( 1, 1, 1 )
+						render.MaterialOverride()
+						v:DrawModel()
+						render.SuppressEngineLighting( true )
+						cam.IgnoreZ(true)
+						render.SetColorModulation( chamColInvis.r * colorFix, chamColInvis.g * colorFix, chamColInvis.b * colorFix )
+						render.SetBlend( chamColInvis.a * colorFix )
+						render.MaterialOverride( texturedCham )
+						v:SetRenderMode( 1 )
+						if chamColInvis.a == 255 then
+							v:SetColor(Color(255, 255, 255, 255))
+						else
+							v:SetColor(Color(255, 255, 255, 0))
+						end
+						v:DrawModel()
+						cam.IgnoreZ(false)
+						render.SuppressEngineLighting( false )
+						render.SetColorModulation( 1, 1, 1 )
+						render.SetBlend( 1 )
+						render.MaterialOverride()
+						v:DrawModel()
+					end
+				end
+			cam.End3D()
+		elseif config["esp_player_chams_material"] == 3 then
+			cam.Start3D( EyePos(), EyeAngles() )
+				for k, v in pairs( player.GetAll() ) do
+					if ValidateESP(v) then
+						cam.IgnoreZ(true)
+						render.SetColorModulation( chamColInvis.r * colorFix, chamColInvis.g * colorFix, chamColInvis.b * colorFix )
+						render.SetBlend( chamColInvis.a * colorFix )
+						render.MaterialOverride( wireframeCham )
+						v:SetRenderMode( 1 )
+						v:SetColor(Color(255, 255, 255, 0))
+						v:DrawModel()
+						cam.IgnoreZ(false)
+					end
+				end
+			cam.End3D()
+		end
+	end
+
+	if config["esp_player_chams"] then
+
+		if config["esp_player_chams_material"] == 1 then
+			cam.Start3D( EyePos(), EyeAngles() )
+				for k, v in pairs( player.GetAll() ) do
+					if ValidateESP(v) then
+						render.SetColorModulation( chamColVis.r * colorFix, chamColVis.g * colorFix, chamColVis.b * colorFix )
+						render.SetBlend( chamColVis.a * colorFix)
+						render.MaterialOverride( texturedCham )
+						v:SetRenderMode( 1 )
+						if chamColVis.a == 255 then
+							v:SetColor(Color(255, 255, 255, 255))
+						else
+							v:SetColor(Color(255, 255, 255, 0))
+						end
+						v:DrawModel()
+					end
+				end
+			cam.End3D()
+		elseif config["esp_player_chams_material"] == 2 then
+			cam.Start3D( EyePos(), EyeAngles() )
+				for k, v in pairs( player.GetAll() ) do
+					if ValidateESP(v) then
+						render.SuppressEngineLighting( true )
+						render.SetColorModulation( chamColVis.r * colorFix, chamColVis.g * colorFix, chamColVis.b * colorFix )
+						render.SetBlend( chamColVis.a * colorFix)
+						render.MaterialOverride( texturedCham )
+						v:SetRenderMode( 1 )
+						if chamColVis.a == 255 then
+							v:SetColor(Color(255, 255, 255, 255))
+						else
+							v:SetColor(Color(255, 255, 255, 0))
+						end
+						v:DrawModel()
+						render.SuppressEngineLighting( false )
+					end
+				end
+			cam.End3D()
+		elseif config["esp_player_chams_material"] == 3 then
+			cam.Start3D( EyePos(), EyeAngles() )
+				for k, v in pairs( player.GetAll() ) do
+					if ValidateESP(v) then
+						render.SetColorModulation( chamColVis.r * colorFix, chamColVis.g * colorFix, chamColVis.b * colorFix )
+						render.SetBlend( chamColVis.a * colorFix)
+						render.MaterialOverride( wireframeCham )
+						v:SetRenderMode( 1 )
+						v:SetColor(Color(255, 255, 255, 0))
+						v:DrawModel()
+					end
+				end
+			cam.End3D()
+		end
+	end
+	if !config["esp_player_chams"] && !config["esp_player_chams_xyz"] then
+		for k, v in pairs(player.GetAll()) do
+			v:SetRenderMode(0)
+		end
+	end
+end)
+
+-- ======================= фог
+
+hook.Add("SetupWorldFog", RandomString(), function()
+
+	if config["esp_other_fog"] then
+
+		local col = string.ToColor(config.colors["esp_other_fog"])
+
+		render.FogMode( MATERIAL_FOG_LINEAR )
+		render.FogStart(config["esp_other_fog_start"])
+		render.FogEnd(config["esp_other_fog_end"])
+		render.FogMaxDensity(config["esp_other_fog_density"])
+		render.FogColor(col.r, col.g, col.b)
+
+		return true
+	end
+end)
+
+hook.Add("SetupSkyboxFog", RandomString(), function( skyboxscale )
+
+	if config["esp_other_fog"] then
+
+		local col = string.ToColor(config.colors["esp_other_fog"])
+
+		render.FogMode( MATERIAL_FOG_LINEAR )
+		render.FogStart(config["esp_other_fog_start"] * skyboxscale)
+		render.FogEnd(config["esp_other_fog_end"] * skyboxscale)
+		render.FogMaxDensity(config["esp_other_fog_density"])
+		render.FogColor(col.r, col.g, col.b)
+
+		return true
+	end
+end)
+
+-- ======================= найтмод
+
+hook.Add( "RenderScreenspaceEffects", "nightmode", function()
+
+	if config["esp_other_nightmode"] then
+		local nightmode = {
+			[ "$pp_colour_addr" ] = 55 * (1 / 255),
+			[ "$pp_colour_addg" ] = 45 * (1 / 255),
+			[ "$pp_colour_addb" ] = 66 * (1 / 255),
+			[ "$pp_colour_brightness" ] = -0.2,
+			[ "$pp_colour_contrast" ] = config["esp_other_nightmode_scale"],
+			[ "$pp_colour_colour" ] = 1,
+			[ "$pp_colour_mulr" ] = 0,
+			[ "$pp_colour_mulg" ] = 0,
+			[ "$pp_colour_mulb" ] = 0
+		}
+		DrawColorModify( nightmode )
+	end
+end)	
+
+--=================================== хитсаунд
+
+	
+hook.Add("ScalePlayerDamage", "hitsound", function(ply, group, dmginfo)
+	if config["esp_other_hitsound"] then
+		if dmginfo:GetAttacker() == LocalPlayer() then
+			surface.PlaySound("garrysmod/balloon_pop_cute.wav")
+		end
+	end
+end)
+
+--=================================== фуллбрайт
+
+
+local LightingModeChanged = false
+hook.Add("PreRender", RandomString(), function()
+	if config["esp_other_fullbright"] then
+		render.SetLightingMode( 1 )
+		LightingModeChanged = true
+	end
+end )
+
+function EndOfLightingMod()
+	if LightingModeChanged then
+		render.SetLightingMode( 0 )
+		LightingModeChanged = false
+	end
+end
+hook.Add("PostRender", RandomString(), EndOfLightingMod)
+hook.Add("PreDrawHUD", RandomString(), EndOfLightingMod)
+
+
+--=================================== рисовка фов
+
+hook.Add("CheatHUDPaint", RandomString(), function()
+	if config["aim_master_toggle"] && config["esp_other_drawfov"] && config["aim_fov"] < 90 then
+		local X1 = math.tan( math.rad( config["aim_fov"] ) / 1.25 )
+		local X2 = math.tan( math.rad( LocalPlayer():GetFOV() / 2 ) )
+		local r = X1 / X2
+		local pxR = r * ( ScrW() / 2 )
+		surface.DrawCircle(ScrW() / 2, ScrH() / 2, pxR, string.ToColor(config.colors["esp_other_drawfov"]))
+	end
+end)
+
+--=================================== модификации камеры
+
+local intp
+
 hook.Add("CalcView", RandomString(), function(ply, pos, ang, fov)
+
 	if config["esp_other_thirdperson"] then
 		local Camera = {}
 		if config.keybinds["thirdperson_key"] == 0 then 
@@ -1246,7 +1649,6 @@ hook.Add("CreateMove", RandomString(), function(ucmd)
 		if !config["aim_onkey"] || ( ( ( config.keybinds["aim_onkey_key"] >= 107 && config.keybinds["aim_onkey_key"] <= 113 ) && input.IsMouseDown(config.keybinds["aim_onkey_key"]) ) || input.IsKeyDown(config.keybinds["aim_onkey_key"]) ) && !frame then
 			if !LocalPlayer():Alive() then return end
 			if LocalPlayer():GetActiveWeapon():Clip1() != 0 then
-			local shouldAutoFire = false
 			local centerx, centery = ScrW() / 2, ScrH() / 2
 			local PlayerDistance, NewPlayerDistance, PlayerHealth, NewPlayerHealth, playerCenter, newPlayerCenter = math.huge, math.huge, math.huge, math.huge, math.huge, math.huge
 				for k, v in pairs(player.GetAll()) do
@@ -1301,7 +1703,6 @@ hook.Add("CreateMove", RandomString(), function(ucmd)
 							end
 
 							if AimP && InFOV then
-								shouldAutoFire = true
 								if config["aim_smoothing"] && ( IsValid(LocalPlayer():GetActiveWeapon()) && LocalPlayer():GetActiveWeapon():GetClass() != "weapon_crossbow" ) then
 									playerCenter = newPlayerCenter
 									PlayerHealth = NewPlayerHealth
@@ -1321,12 +1722,6 @@ hook.Add("CreateMove", RandomString(), function(ucmd)
 								end
 							end
 						end
-					end
-				end
-				if shouldAutoFire && config["aim_autofire"] && config["aim_silent"] then
-					local wep = LocalPlayer():GetActiveWeapon()
-					if IsValid(wep) && wep:GetClass() != "weapon_physgun" then
-						ucmd:SetButtons( bit.bor( ucmd:GetButtons(), IN_ATTACK ) )
 					end
 				end
 			end
