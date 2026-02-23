@@ -13,6 +13,7 @@ config["aim_master_toggle"] = false
 config["aim_onkey"] = false
 config["aim_norecoil"] = false
 config["aim_silent"] = false
+config["aim_autofire"] = false
 config["aim_prediction"] = false
 config["aim_target"] = 1
 config["aim_hitbox"] = 2
@@ -23,7 +24,6 @@ config["aim_ignorefriends"] = false
 
 config["trigger_master_toggle"] = false
 config["trigger_onkey"] = false
-
 
 config["esp_player_box"] = false
 config["esp_player_name"] = false
@@ -62,11 +62,12 @@ config["misc_autobunnyhop"] = false
 config["misc_autostrafe"] = false
 config["misc_ttt"] = false
 config["misc_observerlist"] = false
+config["misc_observerlist_x"] = 0
+config["misc_observerlist_y"] = 0
 config["misc_rainbow"] = false	
 config["misc_rainbow_speed"] = 20
 
 config["config_name"] = nil
-
 
 config["esp_entity_box"] = false
 config["esp_entity_wh_onkey"] = false
@@ -488,6 +489,99 @@ end
 
 timer.Create(RandomString(), 0.5, 0, CheckObservers)
 
+hook.Add("CheatHUDPaint", RandomString(), function()
+	if !config["misc_observerlist"] then return end
+	if !observingPlayers || (!observingPlayers.watcher && !observingPlayers.spec) then return end
+
+	local baseX = config["misc_observerlist_x"] or 0
+	local baseY = config["misc_observerlist_y"] or 0
+	if baseX == 0 && baseY == 0 then
+		baseX = ScrW() - 140
+		baseY = 10
+	end
+
+	local boxSize = 18
+	local x = baseX + boxSize + 6
+	local y = baseY
+	if observingPlayers.watcher then
+		for k, v in ipairs(observingPlayers.watcher) do
+			if !IsValid(v) then continue end
+			surface.SetFont("ESP_Font_Main")
+			local nameWidth = surface.GetTextSize("Observer: " .. v:Name())
+			draw.SimpleText("Observer: " .. v:Name(), "ESP_Font_Main", x, y, Color(255, 255, 255), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+			y = y + 15
+		end
+	end
+	if observingPlayers.spec then
+		for k, v in ipairs(observingPlayers.spec) do
+			if !IsValid(v) then continue end
+			surface.SetFont("ESP_Font_Main")
+			local nameWidth = surface.GetTextSize("Spectator: " .. v:Name())
+			draw.SimpleText("Spectator: " .. v:Name(), "ESP_Font_Main", x, y, Color(255, 0, 0), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+			y = y + 15
+		end
+	end
+end)
+
+local specListIndicator
+hook.Add("Think", RandomString(), function()
+	if !config["misc_observerlist"] then
+		if IsValid(specListIndicator) then specListIndicator:Remove() end
+		return
+	end
+
+	if !IsValid(specListIndicator) then
+		specListIndicator = vgui.Create("DPanel")
+		specListIndicator:SetSize(18, 18)
+		local x = config["misc_observerlist_x"] or 0
+		local y = config["misc_observerlist_y"] or 0
+		if x == 0 && y == 0 then
+			x = ScrW() - 140
+			y = 10
+			config["misc_observerlist_x"] = x
+			config["misc_observerlist_y"] = y
+		end
+		specListIndicator:SetPos(x, y)
+		specListIndicator:SetMouseInputEnabled(false)
+		specListIndicator:SetKeyboardInputEnabled(false)
+		specListIndicator.dragging = false
+		specListIndicator.dragOffsetX = 0
+		specListIndicator.dragOffsetY = 0
+		function specListIndicator:Paint(w, h)
+			local hasSpecs = observingPlayers && observingPlayers.spec && #observingPlayers.spec > 0
+			local col = hasSpecs and Color(255, 0, 0, 220) or Color(255, 255, 255, 180)
+			surface.SetDrawColor(0, 0, 0, 180)
+			surface.DrawRect(0, 0, w, h)
+			surface.SetDrawColor(col)
+			surface.DrawOutlinedRect(0, 0, w, h, 1)
+		end
+		function specListIndicator:OnMousePressed()
+			self.dragging = true
+			local mx, my = gui.MousePos()
+			local px, py = self:GetPos()
+			self.dragOffsetX = mx - px
+			self.dragOffsetY = my - py
+		end
+		function specListIndicator:OnMouseReleased()
+			self.dragging = false
+		end
+		function specListIndicator:Think()
+			local allowDrag = (frame && frame:IsValid()) || (russia_menu && russia_menu:IsVisible())
+			self:SetMouseInputEnabled(allowDrag)
+			if allowDrag && self.dragging then
+				local mx, my = gui.MousePos()
+				local nx = mx - self.dragOffsetX
+				local ny = my - self.dragOffsetY
+				nx = math.Clamp(nx, 0, ScrW() - self:GetWide())
+				ny = math.Clamp(ny, 0, ScrH() - self:GetTall())
+				self:SetPos(nx, ny)
+				config["misc_observerlist_x"] = nx
+				config["misc_observerlist_y"] = ny
+			end
+		end
+	end
+end)
+
 --=================== создание гуи ================
 
 function CreateTimeGUI()
@@ -599,17 +693,18 @@ function CreateTimeGUI()
 	CreateKeybind(110, 30, "aim_onkey_key", aim)
 	CreateCheckBox("no recoil", 10, 50, "aim_norecoil", false, aim)
 	CreateCheckBox("silentaim", 10, 70, "aim_silent", false, aim)
-	CreateCheckBox("predict velocity", 10, 90, "aim_prediction", false, aim)
-	CreateDropdown("harget selection", 10, 110, {"crosshair", "closest Distance", "lowest Health"}, "aim_target", aim)
-	CreateDropdown("hitbone", 10, 150, {"hitscan", "head", "body"}, "aim_hitbox", aim)
-	CreateSlider("aim FoV", 10, 195, "aim_fov", 0, 180, 0, aim)
-	CreateCheckBox("aimbot smooth", 10, 240, "aim_smoothing", false, aim)
-	CreateSlider("smooth", 10, 260, "aim_smoothing_value", 0, 2, 2, aim)
-	CreateCheckBox("ignore friend", 10, 300, "aim_ignorefriends", false, aim)
+	CreateCheckBox("autofire", 10, 90, "aim_autofire", false, aim)
+	CreateCheckBox("predict velocity", 10, 110, "aim_prediction", false, aim)
+	CreateDropdown("harget selection", 10, 130, {"crosshair", "closest Distance", "lowest Health"}, "aim_target", aim)
+	CreateDropdown("hitbone", 10, 170, {"hitscan", "head", "body"}, "aim_hitbox", aim)
+	CreateSlider("aim FoV", 10, 220, "aim_fov", 0, 180, 0, aim)
+	CreateCheckBox("aimbot smooth", 10, 275, "aim_smoothing", false, aim)
+	CreateSlider("smooth", 10, 290, "aim_smoothing_value", 0, 2, 2, aim)
+	CreateCheckBox("ignore friend", 10, 345, "aim_ignorefriends", false, aim)
 
-	CreateCheckBox("enable triggerbot", 10, 320, "trigger_master_toggle", false, aim)
-	CreateCheckBox("triggerbot on key", 10, 340, "trigger_onkey", false, aim)
-	CreateKeybind(130, 340, "trigger_onkey_key", aim)
+	CreateCheckBox("enable triggerbot", 10, 365, "trigger_master_toggle", false, aim)
+	CreateCheckBox("triggerbot on key", 10, 385, "trigger_onkey", false, aim)
+	CreateKeybind(130, 385, "trigger_onkey_key", aim)
 
     CreateCheckBox("box", 10, 10, "esp_player_box", true, visplayer)
     CreateCheckBox("name", 10, 30, "esp_player_name", true, visplayer)
@@ -629,6 +724,7 @@ function CreateTimeGUI()
     CreateCheckBox("esp friend", 10, 355, "esp_player_highlight_box", true, visplayer)
     CreateCheckBox("esp friend name", 10, 375, "esp_player_highlight_name", true, visplayer)
 	CreateButton("entity list", "opens the entity list menu.", CreateEntityList, 10, 395, visplayer)
+	CreateSlider("entity esp distance", 10, 420, "esp_entity_render_distance", 0, 200000, 0, visplayer)
 
 	CreateCheckBox("fog", 10, 10, "esp_other_fog", true, visother)
 	CreateSlider("fog start", 10, 30, "esp_other_fog_start", 0, 50000, 0, visother)
@@ -1332,30 +1428,50 @@ hook.Add("CheatHUDPaint", RandomString(), function()
 						end
 					end
 				end
-				if config["misc_observerlist"] then
-					for k, v in ipairs(observingPlayers.watcher) do
-						if !IsValid(v) then return end
-						surface.SetFont("ESP_Font_Main")
-						local nameWidth, nameHeight = surface.GetTextSize("Observer: "..v:Name())
-						draw.SimpleText("Observer: "..v:Name(), "ESP_Font_Main", ScrW() - nameWidth - 2, 0 + (15 * ( k - 1 ) ), Color(255, 255, 255), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
-					end
-					for k, v in ipairs(observingPlayers.spec) do
-						if !IsValid(v) then return end
-						surface.SetFont("ESP_Font_Main")
-						local nameWidth, nameHeight = surface.GetTextSize("Spectator: "..v:Name())
-						draw.SimpleText("Spectator: "..v:Name(), "ESP_Font_Main", ScrW() - nameWidth - 2, 0 + (15 * #observingPlayers.watcher) + ( 15 * k ), Color(255, 0, 0), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+			end
+		end
+	end
+
+	for k, ent in ipairs(ents.GetAll()) do
+		if IsValid(ent) and not ent:IsPlayer() then
+			local dist = ent:GetPos():Distance(LocalPlayer():GetPos())
+			if dist <= config["esp_entity_render_distance"] then
+
+				local entClass = ent:GetClass() or ""
+				local show = false
+				
+
+				if config["entities"] then
+					for _, whitelistedClass in ipairs(config["entities"]) do
+						if entClass == whitelistedClass then
+							show = true
+							break
+						end
 					end
 				end
-				if v.Traitor then
-					surface.SetFont("ESP_Font_Flag")
-					local w, h = surface.GetTextSize("Traitor")
-					draw.SimpleTextOutlined("Traitor", "ESP_Font_Flag", MaxX+5, MinY + h, Color(255, 0, 0) , TEXT_ALIGN_LEFT, TEXT_ALIGN_BOTTOM, 1, Color(0,0,0))
+				
+
+				local key = config.keybinds["esp_entity_wh_key"] or 0
+				if config["esp_entity_wh_onkey"] and show then
+					if key ~= 0 then
+						show = input.IsKeyDown(key)
+					else
+						show = false
+					end
 				end
-				if config["misc_ttt"] && engine.ActiveGamemode() == "murder" then
-					if v:HasWeapon("weapon_mu_knife") then
+				
+				if config["esp_entity_box"] and show then
+					local MaxX, MaxY, MinX, MinY, V1, V2, V3, V4, V5, V6, V7, V8, isVis = GetENTPos(ent)
+					if isVis then
+						surface.SetDrawColor(string.ToColor(config.colors["esp_entity_box"]))
+						surface.DrawLine( MaxX, MaxY, MinX, MaxY )
+						surface.DrawLine( MaxX, MaxY, MaxX, MinY )
+						surface.DrawLine( MinX, MinY, MaxX, MinY )
+						surface.DrawLine( MinX, MinY, MinX, MaxY )
 						surface.SetFont("ESP_Font_Flag")
-						local w, h = surface.GetTextSize("Murderer")
-						draw.SimpleTextOutlined("Murderer", "ESP_Font_Flag", MaxX+5, MinY + h, Color(255, 0, 0) , TEXT_ALIGN_LEFT, TEXT_ALIGN_BOTTOM, 1, Color(0,0,0))	
+						local txt = entClass
+						local w, h = surface.GetTextSize(txt)
+						draw.SimpleTextOutlined(txt, "ESP_Font_Flag", MaxX-(MaxX-MinX)/2-w/2, MinY-1, string.ToColor(config.colors["esp_entity_box"]), TEXT_ALIGN_LEFT, TEXT_ALIGN_BOTTOM, 1, Color(0,0,0))
 					end 	
 				end
 			end
@@ -1768,7 +1884,10 @@ hook.Add("CreateMove", RandomString(), function(ucmd)
 	end
 
 	if config["aim_master_toggle"] then
-		if !config["aim_onkey"] || ( ( ( config.keybinds["aim_onkey_key"] >= 107 && config.keybinds["aim_onkey_key"] <= 113 ) && input.IsMouseDown(config.keybinds["aim_onkey_key"]) ) || input.IsKeyDown(config.keybinds["aim_onkey_key"]) ) && !frame then
+		local aimKey = config.keybinds["aim_onkey_key"]
+		local aimKeyDown = ( ( aimKey >= 107 && aimKey <= 113 ) and input.IsMouseDown(aimKey) ) or input.IsKeyDown(aimKey)
+		local shouldAutoFire = config["aim_silent"] && config["aim_autofire"] && config["aim_onkey"] && aimKeyDown
+		if !config["aim_onkey"] || aimKeyDown && !frame then
 			if !LocalPlayer():Alive() then return end
 			if LocalPlayer():GetActiveWeapon():Clip1() != 0 then
 			local centerx, centery = ScrW() / 2, ScrH() / 2
@@ -1842,6 +1961,23 @@ hook.Add("CreateMove", RandomString(), function(ucmd)
 										FixMovement(ucmd, realAng)
 									end
 								end
+								if shouldAutoFire then
+									local wep = LocalPlayer():GetActiveWeapon()
+									local isSemi = false
+									if IsValid(wep) && wep.Primary && wep.Primary.Automatic != nil then
+										isSemi = (wep.Primary.Automatic == false)
+									end
+									if isSemi then
+										local nextFire = IsValid(wep) && wep.GetNextPrimaryFire && wep:GetNextPrimaryFire() or 0
+										if CurTime() >= nextFire then
+											ucmd:SetButtons(bit.bor(ucmd:GetButtons(), IN_ATTACK))
+										else
+											ucmd:SetButtons(bit.band(ucmd:GetButtons(), bit.bnot(IN_ATTACK)))
+										end
+									else
+										ucmd:SetButtons(bit.bor(ucmd:GetButtons(), IN_ATTACK))
+									end
+								end
 							end
 						end
 					end
@@ -1849,7 +1985,7 @@ hook.Add("CreateMove", RandomString(), function(ucmd)
 			end
 		end
 	end
-end)
+ end)
 
 function GetAngleDiffrence(from, to)
 
