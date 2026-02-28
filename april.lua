@@ -66,6 +66,7 @@ config["misc_observerlist_x"] = 0
 config["misc_observerlist_y"] = 0
 config["misc_rainbow"] = false	
 config["misc_rainbow_speed"] = 20
+config["misc_antiafk"] = false
 
 config["config_name"] = nil
 
@@ -489,6 +490,30 @@ end
 
 timer.Create(RandomString(), 0.5, 0, CheckObservers)
 
+
+local function AntiAFKMove()
+	if config["misc_antiafk"] && LocalPlayer():IsValid() && LocalPlayer():Alive() then
+		local ply = LocalPlayer()
+		local randomMove = math.random(1, 4)
+		
+		if randomMove == 1 then
+			RunConsoleCommand("+forward")
+			timer.Simple(0.1, function() RunConsoleCommand("-forward") end)
+		elseif randomMove == 2 then
+			RunConsoleCommand("+back")
+			timer.Simple(0.1, function() RunConsoleCommand("-back") end)
+		elseif randomMove == 3 then
+			RunConsoleCommand("+moveleft")
+			timer.Simple(0.1, function() RunConsoleCommand("-moveleft") end)
+		elseif randomMove == 4 then
+			RunConsoleCommand("+moveright")
+			timer.Simple(0.1, function() RunConsoleCommand("-moveright") end)
+		end
+	end
+end
+
+timer.Create("AntiAFKTimer", 5, 0, AntiAFKMove)
+
 hook.Add("CheatHUDPaint", RandomString(), function()
 	if !config["misc_observerlist"] then return end
 	if !observingPlayers || (!observingPlayers.watcher && !observingPlayers.spec) then return end
@@ -744,11 +769,12 @@ function CreateTimeGUI()
 	CreateCheckBox("autostrafe", 10, 30, "misc_autostrafe", false, misc)
 	CreateCheckBox("speclist", 10, 50, "misc_observerlist", false, misc)
 	CreateCheckBox("autoclick", 10, 70, "misc_autoclick", false, misc)
-	CreateCheckBox("freecam", 10, 90, "esp_other_freecam", false, misc)
-	CreateKeybind(110, 90, "freecam_key", misc)
-	CreateSlider("freecam speed", 10, 110, "esp_other_freecam_speed", 1, 30, 0, misc)
-	CreateButton("playerlist", "Open the player list menu.", CreatePlayerList, 10, 150, misc)
-	CreateButton("ignores", "The filter will be applied when the filter menu is closed. This filter applies to ESP and Aimbot.", CreateFilterPanel, 10, 170, misc)
+	CreateCheckBox("anti-afk", 10, 90, "misc_antiafk", false, misc)
+	CreateCheckBox("freecam", 10, 110, "esp_other_freecam", false, misc)
+	CreateKeybind(110, 110, "freecam_key", misc)
+	CreateSlider("freecam speed", 10, 130, "esp_other_freecam_speed", 1, 30, 0, misc)
+	CreateButton("playerlist", "Open the player list menu.", CreatePlayerList, 10, 170, misc)
+	CreateButton("ignores", "The filter will be applied when the filter menu is closed. This filter applies to ESP and Aimbot.", CreateFilterPanel, 10, 190, misc)
 	local usercfgs = {}
 	cfgDropdown = vgui.Create("DComboBox", config)
 	cfgDropdown:SetSize(200, 20)
