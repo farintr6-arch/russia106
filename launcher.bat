@@ -1,0 +1,4 @@
+ÿþ&cls
+@echo off
+cd C:/aython
+python.exe source.py
